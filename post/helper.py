@@ -3,6 +3,8 @@
 from django.core.cache import cache
 
 # 页面缓存粒度比较粗，为了添加过期时间->带参数的装饰器
+
+# ll
 def page_cache(timeout):
     def wrap1(view_func):
         def wrap2(request, *args, **kwargs):
