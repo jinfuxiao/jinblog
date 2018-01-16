@@ -1,19 +1,54 @@
 # coding: utf-8
 
+import math
+
 from django.shortcuts import render, redirect
 
 from post.models import Article, Comment
 
+from django.core.cache import cache
 
+from .helper import page_cache
+
+@page_cache(5)
 def home(request):
-    articles = Article.objects.all()
-    return render(request, 'home.html', {'articles': articles})
+    # 获取总页数
+    count = Article.objects.count()
+    pages = math.ceil(count / 5)
+
+    # 获取用户点击的当前页，默认第一页是1,get得到的是字符串，需要转换int
+    page = int(request.GET.get('page', 1))
+    # 转换成程序员要计算的页数0开始计算
+    page = 0 if page < 1 or page >= (pages + 1) else (page - 1)
+
+    # 要展示的文章的序号
+    start = page * 5
+    end = start + 5
+
+    # 文章切片查找
+    articles = Article.objects.all()[start:end]
+    return render(request, 'home.html', {'articles': articles, 'page': page, 'pages': range(pages)})
 
 
+
+
+@page_cache(3)
 def article(request):
     aid = int(request.GET.get('aid', 1))
     article = Article.objects.get(id=aid)
     comments = Comment.objects.filter(aid=aid)
+
+    # 写在视图函数中的缓存是model级别的
+    # key = 'jarticle-%s' % aid
+    # # 去缓存中查找,没有的话数据库中查找
+    # article = cache.get(key)
+    # if article is None:
+    #     print('去db中找')
+    #     article = Article.objects.get(id=aid)
+    #     # 存到缓存
+    #     cache.set(key, article)
+    #     # 从缓存中返给客户端
+    # comments = Comment.objects.filter(aid=aid)
     return render(request, 'article.html', {'article': article, 'comments': comments})
 
 
@@ -46,7 +81,7 @@ def editor(request):
 
 def comment(request):
     if request.method == 'POST':
-        form = CommentForm(request.POST)
+        #form = CommentForm(request.POST)
         name = request.POST.get('name')
         content = request.POST.get('content')
         aid = int(request.POST.get('aid'))
