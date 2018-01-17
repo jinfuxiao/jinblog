@@ -29,9 +29,17 @@
 		<form method="POST" action="/post/comment/">
 			{% csrf_token %}
 			<div>姓名：<input type="text" name="name"></div>
+{#            <div>#}
+{#                <label for="{{ from.name.id_for_label }}">名字：</label>#}
+{#                <input {{ form.name }}#}
+{#                       {{ form.name.errors }}  />#}
+{#            </div>#}
 			<div style="vertical-align: top;">
 				<span style="vertical-align: top;">内容：</span>
 				<textarea name="content" rows="5" cols="50"></textarea>
+{#                <label for="{{ from.content.id_for_label }}">内容：</label>#}
+{#                <input {{ form.content }}#}
+{#                       {{ form.content.errors }} />#}
 			</div>
 			<input type="hidden" name="aid" value="{{article.id}}">
 			<input type="submit" name="发表评论">

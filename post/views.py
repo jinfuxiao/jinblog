@@ -8,7 +8,11 @@ from post.models import Article, Comment
 
 from django.core.cache import cache
 
-from .helper import page_cache
+from .helper import page_cache, record_count, get_top_n_articles
+from .forms import CommentForm
+from redis import Redis
+
+from pickle import dumps,loads
 
 @page_cache(5)
 def home(request):
@@ -27,16 +31,26 @@ def home(request):
 
     # 文章切片查找
     articles = Article.objects.all()[start:end]
-    return render(request, 'home.html', {'articles': articles, 'page': page, 'pages': range(pages)})
+
+    # 首页展示点击量最高的top10
+    top10 = get_top_n_articles(10)
+
+    # 首页展示评论量最高的top5
+    # top10 = get_comments_n_articles(10)
+    return render(request, 'home.html', {'articles': articles, 'page': page, 'pages': range(pages), 'top10': top10})
 
 
 
 
 @page_cache(3)
+@record_count()
 def article(request):
     aid = int(request.GET.get('aid', 1))
     article = Article.objects.get(id=aid)
     comments = Comment.objects.filter(aid=aid)
+    # 阅读文章，点击量+    -->    装饰器实现
+    # record_click(aid)
+
 
     # 写在视图函数中的缓存是model级别的
     # key = 'jarticle-%s' % aid
@@ -81,7 +95,6 @@ def editor(request):
 
 def comment(request):
     if request.method == 'POST':
-        #form = CommentForm(request.POST)
         name = request.POST.get('name')
         content = request.POST.get('content')
         aid = int(request.POST.get('aid'))
@@ -91,8 +104,15 @@ def comment(request):
     return redirect('/post/home/')
 
 
+
 def search(request):
     if request.method == 'POST':
         keyword = request.POST.get('keyword')
         articles = Article.objects.filter(content__contains=keyword)
         return render(request, 'home.html', {'articles': articles})
+
+
+
+
+
+
