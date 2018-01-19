@@ -2,16 +2,26 @@
 
 {%block content %}
 	<div class="container">
-		<h1 style="text-align: left;">{{article.title}}</h1>
+		<h2 style="text-align: left;">{{article.title}}</h2>
 		<span class="date">{{article.create}}</span>
-		<div style="float: right;">
-			<a href="/post/editor/?aid={{article.id}}">编辑</a>
-			<a href="/post/delete/?aid={{article.id}}">删除</a>
-		</div>
-		<hr>
 
 		<!-- 正文 -->
-		<div>{{article.content | linebreaks}}</div>
+		<div>
+			<div style="float: right;">
+				<a href="/post/editor/?aid={{article.id}}">编辑</a>
+				<a href="/post/delete/?aid={{article.id}}">删除</a>
+			</div>
+
+		{{article.content | linebreaks}}
+		</div>
+
+		<!-- 标签列表 -->
+		<div>
+			{% for tag in tags %}
+			<span><a href="/post/tag/?tid={{tag.id}}">{{tag.name}}</a></span>
+			{% endfor %}
+		</div>
+
 		<hr>
 
 		<!-- 评论 -->
@@ -29,17 +39,9 @@
 		<form method="POST" action="/post/comment/">
 			{% csrf_token %}
 			<div>姓名：<input type="text" name="name"></div>
-{#            <div>#}
-{#                <label for="{{ from.name.id_for_label }}">名字：</label>#}
-{#                <input {{ form.name }}#}
-{#                       {{ form.name.errors }}  />#}
-{#            </div>#}
 			<div style="vertical-align: top;">
 				<span style="vertical-align: top;">内容：</span>
 				<textarea name="content" rows="5" cols="50"></textarea>
-{#                <label for="{{ from.content.id_for_label }}">内容：</label>#}
-{#                <input {{ form.content }}#}
-{#                       {{ form.content.errors }} />#}
 			</div>
 			<input type="hidden" name="aid" value="{{article.id}}">
 			<input type="submit" name="发表评论">

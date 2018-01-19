@@ -10,7 +10,7 @@
 	{% endfor %}
 
 	{% for page in pages %}
-	<a href="/post/home/?page={{forloop.counter}}">{{ forloop.counter }}</a>
+	<a href="/post/home/?page={{ forloop.counter }}">{{ forloop.counter }}</a>
 	{% endfor %}
 
 	<hr>
@@ -23,14 +23,6 @@
 	</div>
 	{% endfor %}
 	<hr>
-    <div>评论数top5文章</div>
-	{% for a, n in top5 %}
-	<div class="index">
-		<span class="date">{{ a.date }}</span>
-		<a href="/post/show/?aid={{a.id}}">{{a.title}}</a>
-		<span class="date" style="float: right;">访问数: {{n}}</span>
-	</div>
-	{% endfor %}
 
 
 {% endblock %}

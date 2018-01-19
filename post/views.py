@@ -4,15 +4,12 @@ import math
 
 from django.shortcuts import render, redirect
 
-from post.models import Article, Comment
+from post.models import Article, Comment, Tag
 
-from django.core.cache import cache
+from .helper import page_cache, record_click, get_top_n_articles, statistic
 
-from .helper import page_cache, record_count, get_top_n_articles
-from .forms import CommentForm
-from redis import Redis
+from users.helper import permit
 
-from pickle import dumps,loads
 
 @page_cache(5)
 def home(request):
@@ -35,22 +32,17 @@ def home(request):
     # 首页展示点击量最高的top10
     top10 = get_top_n_articles(10)
 
-    # 首页展示评论量最高的top5
-    # top10 = get_comments_n_articles(10)
     return render(request, 'home.html', {'articles': articles, 'page': page, 'pages': range(pages), 'top10': top10})
 
 
-
-
+@statistic
 @page_cache(3)
-@record_count()
 def article(request):
     aid = int(request.GET.get('aid', 1))
     article = Article.objects.get(id=aid)
     comments = Comment.objects.filter(aid=aid)
-    # 阅读文章，点击量+    -->    装饰器实现
-    # record_click(aid)
-
+    # 阅读文章，点击量+
+    record_click(aid)
 
     # 写在视图函数中的缓存是model级别的
     # key = 'jarticle-%s' % aid
@@ -66,16 +58,26 @@ def article(request):
     return render(request, 'article.html', {'article': article, 'comments': comments})
 
 
+@permit('admin')
 def create(request):
     if request.method == 'POST':
+        # 创建文章
         title = request.POST.get('title', '')
         content = request.POST.get('content', '')
         article = Article.objects.create(title=title, content=content)
+
+        # 创建tag
+        tags = request.GET.get('tags', '')
+        if tags:
+            tags = [t.strip() for t in tags.split(',')]
+            Tag.create_new_tags(tags, article.id)
+
         return redirect('/post/article/?aid=%s' % article.id)
     else:
         return render(request, 'create.html')
 
 
+@permit('admin')
 def editor(request):
     if request.method == 'POST':
         title = request.POST.get('title')
@@ -86,6 +88,13 @@ def editor(request):
         article.title = title
         article.content = content
         article.save()
+
+        # 创建 或更新 或删除
+        tags = request.POST.get('tags', '')
+        if tags:
+            tag_names = [t.strip() for t in tags.split(',')]
+            article.update_article_tags(tag_names)
+
         return redirect('/post/article/?aid=%s' % article.id)
     else:
         aid = int(request.GET.get('aid', 0))
@@ -93,6 +102,7 @@ def editor(request):
         return render(request, 'editor.html', {'article': article})
 
 
+@permit('user')
 def comment(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -102,7 +112,6 @@ def comment(request):
         Comment.objects.create(name=name, content=content, aid=aid)
         return redirect('/post/article/?aid=%s' % aid)
     return redirect('/post/home/')
-
 
 
 def search(request):

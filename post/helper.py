@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 
+import logging
 from django.core.cache import cache
 
 from redis import Redis
@@ -38,37 +39,27 @@ def page_cache(timeout):
 # 2.2, 通过aid'批量'搜到这10篇文章
 # 2.3, 文章本身的点击量的结合，构造返回的数据
 # 2.4, 返回
+
+
 # 如果是comment的评论数量，显示评论最多的文章列表
 # 增加评论数量是在comment函数中，执行一次post提交，评论一次评论量+1，所以comment函数中调用record_click()函数
 # 显示是在首页，评论量top5
-# 实现功能1，
-# 需要改造一下record_count()函数，变成装饰器
-# 问题1，装饰器怎么写？
-# 问题2，多个装饰器的书写顺序
+# 实现功能1，因为获取aid比较困难，所以写成装饰器不是一个容易实现的想法，
+# #需要改造一下record_count()函数，变成装饰器
+# #问题1，装饰器怎么写？
+# #问题2，多个装饰器的书写顺序
 
 # 实现功能2，构造一个函数，get_comments_n_articles(number)，排序-通过aid找到对应的文章，和评论量结合返回
 # 2.1，article_comments = rds.zrevrange('a_comment', 0, number, withscores=True)
 # 2.2, ...
 
 
-rds = Redis(host='10.0.112.84', port=6379, db=9)
+rds = Redis(host='10.0.112.71', port=6379, db=6)
 
-def record_count(count=1):
-    def wrap1(view_func):
-        def wrap2(request, *args, **kwargs):
-            response = view_func(request, *args, **kwargs)
-            key = 'a_' + view_func.__name__
-            aid = int(request.GET.get('aid', 0))
-            rds.zincrby(key, aid, count)
-            return response
-        return wrap2
-    return wrap1
 
-#
-# def record_click(aid, count=1):
-#     # 设计count字段是为了以后批量修改--前瞻性
-#     rds.zincrby('a_click', aid, count)
-
+def record_click(aid, count=1):
+    # 设计count字段是为了以后批量修改--前瞻性
+    rds.zincrby('a_click', aid, count)
 
 
 def get_top_n_articles(number):
@@ -100,3 +91,24 @@ def get_top_n_articles(number):
         data[0] = articles[a_id]
 
     return article_clicks
+
+# log,打印读取文章的用户的ip和id
+
+logger = logging.getLogger('statistic')
+
+
+def statistic(view_func):
+    def wrap(request, *args, **kwargs):
+        # 在执行完读文章函数之后，再判断是否执行成功，成功后才记录
+        response = view_func(request, *args, **kwargs)
+        if response.status_code == 200:
+            ip = request.META['REMOTE_ADDR']
+            aid = request.objects.get('aid')
+            logger.info('%s %s' % (ip, aid))
+        return response
+    return wrap
+
+
+
+
+
